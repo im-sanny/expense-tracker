@@ -13,6 +13,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /track", handlers.Get)
+	mux.HandleFunc("GET /track/{id}", handlers.GetById)
 
 	log.Println("Server running on port :3000")
 	err := http.ListenAndServe(":3000", mux)
