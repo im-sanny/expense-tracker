@@ -1,0 +1,8 @@
+[build]
+  cmd = "go build -o ./tmp/expense-tracker ./cmd/expense-tracker"
+  bin = "./tmp/expense-tracker"
+  delay = 1000
+  exclude_dir = ["assets", "tmp", "vendor", "testdata"]
+  exclude_regex = ["_test.go"]
+  include_dir = ["cmd", "internal"]
+  include_ext = ["go"]
