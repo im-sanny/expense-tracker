@@ -1,9 +1,10 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"expense-tracker/internal/model"
+	"expense-tracker/internal/repository"
 
 	"net/http"
 	"strconv"
@@ -21,14 +22,9 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 
 	var e model.Expense
 
-	err = h.DB.QueryRow(`
-	SELECT id, date, amount, note
-	FROM expenses
-	WHERE id=$1`, id).Scan(
-		&e.ID, &e.Date, &e.Amount, &e.Note)
-
+	gId, err := h.Repo.GetById(int64(id), &e)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, repository.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
 			return
 		}
@@ -36,7 +32,7 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(e)
+	err = json.NewEncoder(w).Encode(gId)
 	if err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return

@@ -37,3 +37,22 @@ func (r *ExpenseRepo) Patch(id int64, e *model.Expense) (*model.Expense, error) 
 
 	return &updated, nil
 }
+
+func (r *ExpenseRepo) GetById(id int64, e *model.Expense) (*model.Expense, error) {
+	var eId model.Expense
+	err := r.DB.QueryRow(`
+	SELECT id, date, amount, note
+	FROM expenses
+	WHERE id=$1`, id).Scan(
+		&eId.ID, &eId.Date, &eId.Amount, &eId.Note)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &eId, nil
+
+}
