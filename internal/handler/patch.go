@@ -1,9 +1,10 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"expense-tracker/internal/model"
+	"expense-tracker/internal/repository"
 	"net/http"
 	"strconv"
 )
@@ -25,16 +26,9 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.DB.QueryRow(`
-	UPDATE expenses SET
-	amount = COALESCE($1, amount),
-	note = COALESCE($2, note)
-	WHERE id=$3 RETURNING id, date, amount, note`,
-		e.Amount, e.Note, id).Scan(
-		&e.ID, &e.Date, &e.Amount, &e.Note)
-
+	updated, err := h.Repo.Patch(int64(id), &e)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, repository.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
 			return
 		}
@@ -43,7 +37,7 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(e)
+	err = json.NewEncoder(w).Encode(updated)
 	if err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return

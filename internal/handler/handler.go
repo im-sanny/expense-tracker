@@ -1,11 +1,13 @@
 package handler
 
-import "database/sql"
+import (
+	"expense-tracker/internal/repository"
+)
 
 type Handler struct {
-	DB *sql.DB
+	Repo *repository.ExpenseRepo
 }
 
-func NewHandler(db *sql.DB) *Handler {
-	return &Handler{DB: db}
+func NewHandler(repo *repository.ExpenseRepo) *Handler {
+	return &Handler{Repo: repo}
 }

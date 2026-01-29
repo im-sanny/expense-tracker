@@ -2,6 +2,7 @@ package main
 
 import (
 	"expense-tracker/internal/handler"
+	"expense-tracker/internal/repository"
 	db "expense-tracker/internal/repository"
 	"log"
 	"net/http"
@@ -11,7 +12,8 @@ func main() {
 	database := db.InitDB()
 	defer database.Close()
 
-	h := handler.NewHandler(database)
+	repo := repository.NewExpenseRepo(database)
+	h := handler.NewHandler(repo)
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /track", h.Get)
