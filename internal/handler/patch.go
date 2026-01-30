@@ -20,8 +20,7 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var e model.Expense
-	err = json.NewDecoder(r.Body).Decode(&e)
-	if err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&e); err != nil {
 		http.Error(w, "invalid JSON body", http.StatusBadRequest)
 		return
 	}
@@ -32,13 +31,11 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "expense not found", http.StatusNotFound)
 			return
 		}
-
 		http.Error(w, "failed to update expense", http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(updated)
-	if err != nil {
+	if err = json.NewEncoder(w).Encode(updated); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}

@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"expense-tracker/internal/model"
 	"expense-tracker/internal/repository"
 
 	"net/http"
@@ -20,9 +19,7 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var e model.Expense
-
-	gId, err := h.Repo.GetById(int64(id), &e)
+	expense, err := h.Repo.GetById(int64(id))
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
@@ -32,8 +29,7 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(gId)
-	if err != nil {
+	if err = json.NewEncoder(w).Encode(expense); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}

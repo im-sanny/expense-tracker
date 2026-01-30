@@ -7,7 +7,6 @@ import (
 	"expense-tracker/internal/repository"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
@@ -21,10 +20,10 @@ func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var e model.Expense
-	e.Date = time.Now()
+
 	err = json.NewDecoder(r.Body).Decode(&e)
 	if err != nil {
-		http.Error(w, "invalid JSON body", http.StatusInternalServerError)
+		http.Error(w, "invalid JSON body", http.StatusBadRequest)
 		return
 	}
 
@@ -38,8 +37,7 @@ func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(updated)
-	if err != nil {
+	if err = json.NewEncoder(w).Encode(updated); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}

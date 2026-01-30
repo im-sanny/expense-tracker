@@ -17,35 +17,56 @@ func NewExpenseRepo(db *sql.DB) *ExpenseRepo {
 	return &ExpenseRepo{DB: db}
 }
 
-func (r *ExpenseRepo) Patch(id int64, e *model.Expense) (*model.Expense, error) {
-	var updated model.Expense
+func (r *ExpenseRepo) Post(expense *model.Expense) (*model.Expense, error) {
+	var created model.Expense
+	expense.Date = time.Now()
 
 	err := r.DB.QueryRow(`
-	UPDATE expenses SET
-	amount = COALESCE($1, amount),
-	note = COALESCE($2, not)
-	WHERE id=$3
+	INSERT INTO
+	expenses(date, amount, note)
+	VALUES($1, $2, $3)
 	RETURNING id, date, amount, note`,
-		updated.Amount, updated.Note, id).Scan(
-		&updated.ID, &updated.Date, &updated.Amount, &updated.Note)
+		expense.Date, expense.Amount, expense.Note).Scan(
+		&created.ID, &created.Date, &created.Amount, &created.Note)
 
-	if err == sql.ErrNoRows {
-		return nil, ErrNotFound
-	}
 	if err != nil {
 		return nil, err
 	}
 
-	return &updated, nil
+	return &created, nil
 }
 
-func (r *ExpenseRepo) GetById(id int64, e *model.Expense) (*model.Expense, error) {
-	var eId model.Expense
+func (r *ExpenseRepo) Get() ([]model.Expense, error) {
+	var expenses []model.Expense
+	rows, err := r.DB.Query(`SELECT id, date, amount, note FROM expenses`)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var expense model.Expense
+		if err := rows.Scan(&expense.ID, &expense.Date, &expense.Amount, &expense.Note); err != nil {
+			return nil, err
+		}
+		expenses = append(expenses, expense)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return expenses, nil
+}
+
+func (r *ExpenseRepo) GetById(id int64) (*model.Expense, error) {
+	var expense model.Expense
 	err := r.DB.QueryRow(`
 	SELECT id, date, amount, note
 	FROM expenses
 	WHERE id=$1`, id).Scan(
-		&eId.ID, &eId.Date, &eId.Amount, &eId.Note)
+		&expense.ID, &expense.Date, &expense.Amount, &expense.Note)
 
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
@@ -54,8 +75,49 @@ func (r *ExpenseRepo) GetById(id int64, e *model.Expense) (*model.Expense, error
 		return nil, err
 	}
 
-	return &eId, nil
+	return &expense, nil
+}
 
+func (r *ExpenseRepo) Put(id int64, expense *model.Expense) (*model.Expense, error) {
+	expense.Date = time.Now()
+	err := r.DB.QueryRow(`
+	UPDATE expenses SET
+	amount=$1, note=$2 WHERE id=$3
+	RETURNING id, date, amount, note`,
+		expense.Amount, expense.Note, id).Scan(
+		&expense.ID, &expense.Date, &expense.Amount, &expense.Note)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return expense, nil
+}
+
+func (r *ExpenseRepo) Patch(id int64, update *model.Expense) (*model.Expense, error) {
+	var expense model.Expense
+
+	err := r.DB.QueryRow(`
+	UPDATE expenses SET
+	amount = COALESCE($1, amount),
+	note = COALESCE($2, note)
+	WHERE id=$3
+	RETURNING id, date, amount, note`,
+		update.Amount, update.Note, id).Scan(
+		&expense.ID, &expense.Date, &expense.Amount, &expense.Note)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &expense, nil
 }
 
 func (r *ExpenseRepo) Delete(id int64) error {
@@ -73,66 +135,4 @@ func (r *ExpenseRepo) Delete(id int64) error {
 	}
 
 	return nil
-}
-
-func (r *ExpenseRepo) Put(id int64, e *model.Expense) (*model.Expense, error) {
-	var updated model.Expense
-	err := r.DB.QueryRow(`
-	UPDATE expenses SET
-	amount=$1, note=$2 WHERE id=$3
-	RETURNING id, date, amount, note`,
-		updated.Amount, updated.Note, id).Scan(
-		&updated.ID, &updated.Date, &updated.Amount, &updated.Note)
-
-	if err == sql.ErrNoRows {
-		return nil, ErrNotFound
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &updated, nil
-}
-
-func (r *ExpenseRepo) Post(e *model.Expense) (*model.Expense, error) {
-	e.Date = time.Now()
-
-	err := r.DB.QueryRow(`
-	INSERT INTO
-	expenses(date, amount, note)
-	VALUES($1, $2, $3)
-	RETURNING id, date, amount, note`,
-		e.Date, e.Amount, e.Note).Scan(
-		&e.ID, &e.Date, &e.Amount, &e.Note)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return e, nil
-}
-
-func (r *ExpenseRepo) Get() ([]model.Expense, error) {
-	var expense []model.Expense
-	rows, err := r.DB.Query(`SELECT id, date, amount, note FROM expenses`)
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var e model.Expense
-		if err := rows.Scan(&e.ID, &e.Date, &e.Amount, &e.Note); err != nil {
-			return nil, err
-		}
-		expense = append(expense, e)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return expense, nil
 }
