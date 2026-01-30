@@ -73,3 +73,23 @@ func (r *ExpenseRepo) Delete(id int64) error {
 
 	return nil
 }
+
+func (r *ExpenseRepo) Put(id int64, e *model.Expense) (*model.Expense, error) {
+	var updated  model.Expense
+	err := r.DB.QueryRow(`
+	UPDATE expenses SET
+	amount=$1, note=$2 WHERE id=$3
+	RETURNING id, date, amount, note`,
+		updated.Amount, updated.Note, id).Scan(
+		&updated.ID, &updated.Date, &updated.Amount, &updated.Note)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &updated, nil
+}
