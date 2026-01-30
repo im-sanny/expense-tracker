@@ -113,4 +113,26 @@ func (r *ExpenseRepo) Post(e *model.Expense) (*model.Expense, error) {
 	return e, nil
 }
 
+func (r *ExpenseRepo) Get() ([]model.Expense, error) {
+	var expense []model.Expense
+	rows, err := r.DB.Query(`SELECT id, date, amount, note FROM expenses`)
+	if err != nil {
+		return nil, err
+	}
 
+	defer rows.Close()
+
+	for rows.Next() {
+		var e model.Expense
+		if err := rows.Scan(&e.ID, &e.Date, &e.Amount, &e.Note); err != nil {
+			return nil, err
+		}
+		expense = append(expense, e)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return expense, nil
+}
