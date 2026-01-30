@@ -2,34 +2,34 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"expense-tracker/internal/model"
+	"expense-tracker/internal/repository"
+	"log"
 	"net/http"
-	"time"
 )
 
 func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
 	var e model.Expense
+
 	err := json.NewDecoder(r.Body).Decode(&e)
 	if err != nil {
 		http.Error(w, "invalid JSON body", http.StatusBadRequest)
 		return
 	}
 
-	e.Date = time.Now()
-	err = h.DB.QueryRow(`
-	INSERT INTO
-	expenses(date, amount, note)
-	VALUES($1, $2, $3)
-	RETURNING id, date, amount, note`,
-		e.Date, e.Amount, e.Note).Scan(
-		&e.ID, &e.Date, &e.Amount, &e.Note)
-
+	create, err := h.Repo.Post(&e)
 	if err != nil {
-		http.Error(w, "failed to insert data in expense", http.StatusInternalServerError)
+		if errors.Is(err, repository.ErrNotFound) {
+			http.Error(w, "expense not created", http.StatusNoContent)
+			return
+		}
+		log.Println(err)
+		http.Error(w, "failed to insert data in expenses", http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(e)
+	err = json.NewEncoder(w).Encode(create)
 	if err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return

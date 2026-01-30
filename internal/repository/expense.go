@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"expense-tracker/internal/model"
+	"time"
 )
 
 var ErrNotFound = errors.New("expense not found")
@@ -75,7 +76,7 @@ func (r *ExpenseRepo) Delete(id int64) error {
 }
 
 func (r *ExpenseRepo) Put(id int64, e *model.Expense) (*model.Expense, error) {
-	var updated  model.Expense
+	var updated model.Expense
 	err := r.DB.QueryRow(`
 	UPDATE expenses SET
 	amount=$1, note=$2 WHERE id=$3
@@ -93,3 +94,23 @@ func (r *ExpenseRepo) Put(id int64, e *model.Expense) (*model.Expense, error) {
 
 	return &updated, nil
 }
+
+func (r *ExpenseRepo) Post(e *model.Expense) (*model.Expense, error) {
+	e.Date = time.Now()
+
+	err := r.DB.QueryRow(`
+	INSERT INTO
+	expenses(date, amount, note)
+	VALUES($1, $2, $3)
+	RETURNING id, date, amount, note`,
+		e.Date, e.Amount, e.Note).Scan(
+		&e.ID, &e.Date, &e.Amount, &e.Note)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return e, nil
+}
+
+
