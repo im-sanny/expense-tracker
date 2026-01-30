@@ -56,3 +56,20 @@ func (r *ExpenseRepo) GetById(id int64, e *model.Expense) (*model.Expense, error
 	return &eId, nil
 
 }
+
+func (r *ExpenseRepo) Delete(id int64) error {
+	result, err := r.DB.Exec(`DELETE FROM expenses WHERE id=$1`, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

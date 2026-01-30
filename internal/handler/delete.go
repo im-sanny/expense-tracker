@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+	"expense-tracker/internal/repository"
 	"net/http"
 	"strconv"
 )
@@ -15,20 +17,13 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.DB.Exec(`DELETE FROM expenses WHERE id=$1`, id)
+	err = h.Repo.Delete(int64(id))
 	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			http.Error(w, "expense not found", http.StatusNotFound)
+			return
+		}
 		http.Error(w, "failed to delete expense", http.StatusInternalServerError)
-		return
-	}
-
-	rowsAffected, err := rows.RowsAffected()
-	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	if rowsAffected == 0 {
-		http.Error(w, "data not found", http.StatusNotFound)
 		return
 	}
 
