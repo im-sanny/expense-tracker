@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"expense-tracker/internal/model"
-	"expense-tracker/internal/repository"
+	er "expense-tracker/pkg/errors"
 	"net/http"
 	"strconv"
 )
@@ -27,7 +27,7 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := h.Repo.Patch(int64(id), &e)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
+		if errors.Is(err, er.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
 			return
 		}

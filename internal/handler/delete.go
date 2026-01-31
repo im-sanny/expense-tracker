@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	"expense-tracker/internal/repository"
+	er "expense-tracker/pkg/errors"
 	"net/http"
 	"strconv"
 )
@@ -19,7 +19,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	err = h.Repo.Delete(int64(id))
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
+		if errors.Is(err, er.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
 			return
 		}
