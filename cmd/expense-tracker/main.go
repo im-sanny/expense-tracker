@@ -1,9 +1,9 @@
 package main
 
 import (
+	"expense-tracker/internal/db"
 	"expense-tracker/internal/handler"
 	"expense-tracker/internal/repository"
-	db "expense-tracker/internal/repository"
 	"log"
 	"net/http"
 )
