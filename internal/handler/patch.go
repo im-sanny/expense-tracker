@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
+func (h *ExpenseHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	idStr := r.PathValue("id")

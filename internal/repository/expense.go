@@ -7,11 +7,20 @@ import (
 	"time"
 )
 
+type ExpenseRepoInterface interface {
+	Get() ([]model.Expense, error)
+	GetById(id int64) (*model.Expense, error)
+	Post(e *model.Expense) (*model.Expense, error)
+	Put(id int64, e *model.Expense) (*model.Expense, error)
+	Patch(id int64, e *model.Expense) (*model.Expense, error)
+	Delete(id int64) error
+}
+
 type ExpenseRepo struct {
 	DB *sql.DB
 }
 
-func NewExpenseRepo(db *sql.DB) *ExpenseRepo {
+func NewExpenseRepo(db *sql.DB) ExpenseRepoInterface {
 	return &ExpenseRepo{DB: db}
 }
 

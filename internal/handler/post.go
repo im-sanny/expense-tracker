@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
+func (h *ExpenseHandler) Post(w http.ResponseWriter, r *http.Request) {
 	var e model.Expense
 
 	err := json.NewDecoder(r.Body).Decode(&e)

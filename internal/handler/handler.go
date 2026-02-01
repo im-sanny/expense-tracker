@@ -4,10 +4,10 @@ import (
 	"expense-tracker/internal/repository"
 )
 
-type Handler struct {
-	Repo *repository.ExpenseRepo
+type ExpenseHandler struct {
+	Repo repository.ExpenseRepoInterface
 }
 
-func NewHandler(repo *repository.ExpenseRepo) *Handler {
-	return &Handler{Repo: repo}
+func NewHandler(repo repository.ExpenseRepoInterface) *ExpenseHandler {
+	return &ExpenseHandler{Repo: repo}
 }

@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *ExpenseHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	idStr := r.PathValue("id")

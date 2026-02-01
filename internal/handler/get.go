@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	rows, err := h.Repo.Get()
