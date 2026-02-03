@@ -2,6 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"expense-tracker/internal/model"
+	"log"
 	"strconv"
 
 	"net/http"
@@ -16,7 +18,7 @@ func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
-	if err != nil || limit <= 0{
+	if err != nil || limit <= 0 {
 		limit = 10
 	}
 
@@ -28,7 +30,28 @@ func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = json.NewEncoder(w).Encode(rows); err != nil {
+	total, err := h.Repo.Count()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	totalPages := (total + limit - 1) / limit
+
+	type ExpenseCount struct {
+		Data       []model.Expense `json:"data"`
+		Page       int             `json:"page"`
+		TotalPages int             `json:"total_pages"`
+		Total      int             `json:"total"`
+	}
+
+	res := ExpenseCount{
+		Data:       rows,
+		Page:       page,
+		TotalPages: totalPages,
+		Total:      total,
+	}
+
+	if err = json.NewEncoder(w).Encode(res); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}

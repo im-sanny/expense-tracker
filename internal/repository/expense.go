@@ -14,6 +14,7 @@ type ExpenseRepoInterface interface {
 	Put(id int64, e *model.Expense) (*model.Expense, error)
 	Patch(id int64, e *model.Expense) (*model.Expense, error)
 	Delete(id int64) error
+	Count() (int, error)
 }
 
 type ExpenseRepo struct {
@@ -41,6 +42,16 @@ func (r *ExpenseRepo) Post(expense *model.Expense) (*model.Expense, error) {
 	}
 
 	return &created, nil
+}
+
+func (r *ExpenseRepo) Count() (int, error) {
+	var total int
+
+	err := r.DB.QueryRow(`SELECT COUNT(*) FROM expenses`).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (r *ExpenseRepo) Get(offset, limit int) ([]model.Expense, error) {
