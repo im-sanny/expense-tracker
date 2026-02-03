@@ -8,7 +8,7 @@ import (
 )
 
 type ExpenseRepoInterface interface {
-	Get() ([]model.Expense, error)
+	Get(offset, limit int) ([]model.Expense, error)
 	GetById(id int64) (*model.Expense, error)
 	Post(e *model.Expense) (*model.Expense, error)
 	Put(id int64, e *model.Expense) (*model.Expense, error)
@@ -43,9 +43,14 @@ func (r *ExpenseRepo) Post(expense *model.Expense) (*model.Expense, error) {
 	return &created, nil
 }
 
-func (r *ExpenseRepo) Get() ([]model.Expense, error) {
+func (r *ExpenseRepo) Get(offset, limit int) ([]model.Expense, error) {
 	var expenses []model.Expense
-	rows, err := r.DB.Query(`SELECT id, date, amount, note FROM expenses`)
+
+	rows, err := r.DB.Query(`
+	SELECT id, date, amount, note
+	FROM expenses
+	ORDER BY id OFFSET $1 LIMIT $2`, offset, limit,
+	)
 	if err != nil {
 		return nil, err
 	}
