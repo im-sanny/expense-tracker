@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"expense-tracker/internal/model"
+	"log"
 	"strconv"
 
 	"net/http"
@@ -24,9 +25,23 @@ func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 		limit = 100
 	}
 
+	min, err := strconv.Atoi(r.URL.Query().Get("min"))
+	if err != nil {
+		log.Println("err from min", err)
+	}
+	max, err := strconv.Atoi(r.URL.Query().Get("max"))
+	if err != nil {
+		log.Println("err from max", err)
+	}
+
+	if min > 0 && max > 0 && min > max { //if min is greater than 0 and max is grater than 0 and min is grater than max then error
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
 	offset := (page - 1) * limit // Page is for humans. Offset is for databases, Offset = how many rows to SKIP.
 
-	rows, err := h.Repo.Get(offset, limit) // sql only only cares about OFFSET and LIMIT that's why I'm not sending page or anything.
+	rows, err := h.Repo.Get(offset, limit, min, max) // sql only only cares about OFFSET and LIMIT that's why I'm not sending page or anything.
 	if err != nil {
 		http.Error(w, "failed to get expense data", http.StatusInternalServerError)
 		return
