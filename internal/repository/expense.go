@@ -44,23 +44,16 @@ func (r *ExpenseRepo) Post(expense *model.Expense) (*model.Expense, error) {
 	return &created, nil
 }
 
-func (r *ExpenseRepo) Count() (int, error) {
-	var total int
-
-	err := r.DB.QueryRow(`SELECT COUNT(*) FROM expenses`).Scan(&total)
-	if err != nil {
-		return 0, err
-	}
-	return total, nil
-}
-
 func (r *ExpenseRepo) Get(offset, limit int) ([]model.Expense, error) {
 	var expenses []model.Expense
 
 	rows, err := r.DB.Query(`
 	SELECT id, date, amount, note
 	FROM expenses
-	ORDER BY id OFFSET $1 LIMIT $2`, offset, limit,
+	ORDER BY id DESC
+	OFFSET $1
+	LIMIT $2
+	`, offset, limit,
 	)
 	if err != nil {
 		return nil, err
@@ -81,6 +74,15 @@ func (r *ExpenseRepo) Get(offset, limit int) ([]model.Expense, error) {
 	}
 
 	return expenses, nil
+}
+
+func (r *ExpenseRepo) Count() (int, error) {
+	var total int
+	err := r.DB.QueryRow(`SELECT COUNT(*) FROM expenses`).Scan(&total)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (r *ExpenseRepo) GetById(id int64) (*model.Expense, error) {
