@@ -3,7 +3,10 @@ package handler
 import (
 	"encoding/json"
 	"expense-tracker/internal/model"
+	"expense-tracker/internal/repository"
+	"log"
 	"strconv"
+	"time"
 
 	"net/http"
 )
@@ -42,20 +45,51 @@ func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if min > 0 && max > 0 && min > max {
+	if min > 0 && max > 0 && min > max { //if min is greater than 0 and max is grater than 0 and min is grater than max then error
 		http.Error(w, "min can't be grater than max", http.StatusBadRequest)
+		return
+	}
+
+	layout := "2006-01-02"
+	var from, to time.Time
+
+	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
+		var err error
+		if from, err = time.Parse(layout, fromStr); err != nil {
+			http.Error(w, "invalid 'from' data format", http.StatusBadRequest)
+			return
+		}
+	}
+	if toStr := r.URL.Query().Get("to"); toStr != "" {
+		var err error
+		if to, err = time.Parse(layout, toStr); err != nil {
+			http.Error(w, "invalid 'to' data format", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if !from.IsZero() && !to.IsZero() && from.After(to) {
+		http.Error(w, "'from' date must be before 'to' date", http.StatusBadRequest)
 		return
 	}
 
 	offset := (page - 1) * limit
 
-	rows, err := h.Repo.Get(offset, limit, min, max)
+	filter := repository.ExpenseFilter{
+		Min:  min,
+		Max:  max,
+		From: from,
+		To:   to,
+	}
+
+	rows, err := h.Repo.Get(offset, limit, filter)
 	if err != nil {
+		log.Println(err)
 		http.Error(w, "failed to get expense data", http.StatusInternalServerError)
 		return
 	}
 
-	total, err := h.Repo.Count()
+	total, err := h.Repo.Count(filter)
 	if err != nil {
 		http.Error(w, "failed to get total count", http.StatusInternalServerError)
 		return

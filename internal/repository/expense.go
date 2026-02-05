@@ -7,14 +7,21 @@ import (
 	"time"
 )
 
+type ExpenseFilter struct {
+	Min  int       `json:"min"`
+	Max  int       `json:"max"`
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
+}
+
 type ExpenseRepoInterface interface {
-	Get(offset, limit, min, max int) ([]model.Expense, error)
+	Get(offset, limit int, f ExpenseFilter) ([]model.Expense, error)
 	GetById(id int64) (*model.Expense, error)
 	Post(e *model.Expense) (*model.Expense, error)
 	Put(id int64, e *model.Expense) (*model.Expense, error)
 	Patch(id int64, e *model.Expense) (*model.Expense, error)
 	Delete(id int64) error
-	Count() (int, error)
+	Count(f ExpenseFilter) (int, error)
 }
 
 type ExpenseRepo struct {
@@ -44,19 +51,21 @@ func (r *ExpenseRepo) Post(expense *model.Expense) (*model.Expense, error) {
 	return &created, nil
 }
 
-func (r *ExpenseRepo) Get(offset, limit, min, max int) ([]model.Expense, error) {
+func (r *ExpenseRepo) Get(offset, limit int, f ExpenseFilter) ([]model.Expense, error) {
 	var expenses []model.Expense
 
-	rows, err := r.DB.Query(`
+rows, err := r.DB.Query(`
 	SELECT id, date, amount, note
 	FROM expenses
-	WHERE ($3 = 0 OR AMOUNT >= $3)
-	AND ($4 = 0 OR AMOUNT <= $4)
+	WHERE ($1 = 0 OR amount >= $1)
+	AND ($2 = 0 OR amount <= $2)
+	AND ($3 = '0001-01-01'::date OR date >= $3::date)
+	AND ($4 = '0001-01-01'::date OR date <= $4::date)
 	ORDER BY id DESC
-	OFFSET $1
-	LIMIT $2
-	`, offset, limit, min, max  ,
-	)
+	OFFSET $5
+	LIMIT $6
+	`, f.Min, f.Max, f.From, f.To, offset, limit,
+)
 	if err != nil {
 		return nil, err
 	}
@@ -78,9 +87,18 @@ func (r *ExpenseRepo) Get(offset, limit, min, max int) ([]model.Expense, error) 
 	return expenses, nil
 }
 
-func (r *ExpenseRepo) Count() (int, error) {
+func (r *ExpenseRepo) Count(f ExpenseFilter) (int, error) {
 	var total int
-	err := r.DB.QueryRow(`SELECT COUNT(*) FROM expenses`).Scan(&total)
+
+err := r.DB.QueryRow(`
+	SELECT COUNT(*)
+	FROM expenses
+	WHERE ($1 = 0 OR amount >= $1)
+	AND ($2 = 0 OR amount <= $2)
+	AND ($3 = '0001-01-01'::date OR date >= $3::date)
+	AND ($4 = '0001-01-01'::date OR date <= $4::date)
+	`, f.Min, f.Max, f.From, f.To).Scan(&total)
+	
 	if err != nil {
 		return 0, err
 	}
