@@ -6,6 +6,7 @@ import (
 	"expense-tracker/internal/repository"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"net/http"
@@ -73,13 +74,17 @@ func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	search := strings.TrimSpace(r.URL.Query().Get("q"))
+	if search == "" {}
+
 	offset := (page - 1) * limit
 
 	filter := repository.ExpenseFilter{
-		Min:  min,
-		Max:  max,
-		From: from,
-		To:   to,
+		Min:    min,
+		Max:    max,
+		From:   from,
+		To:     to,
+		Search: search,
 	}
 
 	rows, err := h.Repo.Get(offset, limit, filter)

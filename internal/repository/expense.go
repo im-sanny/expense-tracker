@@ -12,6 +12,7 @@ type ExpenseFilter struct {
 	Max  int       `json:"max"`
 	From time.Time `json:"from"`
 	To   time.Time `json:"to"`
+	Search string `json:"search"`
 }
 
 type ExpenseRepoInterface interface {
@@ -61,10 +62,11 @@ rows, err := r.DB.Query(`
 	AND ($2 = 0 OR amount <= $2)
 	AND ($3 = '0001-01-01'::date OR date >= $3::date)
 	AND ($4 = '0001-01-01'::date OR date <= $4::date)
+	AND ($5 = '' OR note ILIKE '%' || $5 || '%')
 	ORDER BY id DESC
-	OFFSET $5
-	LIMIT $6
-	`, f.Min, f.Max, f.From, f.To, offset, limit,
+	OFFSET $6
+	LIMIT $7
+	`, f.Min, f.Max, f.From, f.To, f.Search, offset, limit,
 )
 	if err != nil {
 		return nil, err
@@ -97,8 +99,9 @@ err := r.DB.QueryRow(`
 	AND ($2 = 0 OR amount <= $2)
 	AND ($3 = '0001-01-01'::date OR date >= $3::date)
 	AND ($4 = '0001-01-01'::date OR date <= $4::date)
-	`, f.Min, f.Max, f.From, f.To).Scan(&total)
-	
+	AND ($5 = '' OR note ILIKE '%' || $5 || '%')
+	`, f.Min, f.Max, f.From, f.To, f.Search).Scan(&total)
+
 	if err != nil {
 		return 0, err
 	}
