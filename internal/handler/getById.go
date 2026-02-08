@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	er "expense-tracker/pkg/errors"
+	"expense-tracker/pkg/apperrors"
 
 	"net/http"
 	"strconv"
@@ -21,7 +21,7 @@ func (h *ExpenseHandler) GetById(w http.ResponseWriter, r *http.Request) {
 
 	expense, err := h.Repo.GetById(int64(id))
 	if err != nil {
-		if errors.Is(err, er.ErrNotFound) {
+		if errors.Is(err, apperrors.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
 			return
 		}

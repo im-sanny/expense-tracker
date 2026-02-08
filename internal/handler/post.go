@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"expense-tracker/internal/model"
-	er "expense-tracker/pkg/errors"
+	"expense-tracker/pkg/apperrors"
 	"log"
 	"net/http"
 )
@@ -20,7 +20,7 @@ func (h *ExpenseHandler) Post(w http.ResponseWriter, r *http.Request) {
 
 	create, err := h.Repo.Post(&e)
 	if err != nil {
-		if errors.Is(err, er.ErrNotFound) {
+		if errors.Is(err, apperrors.ErrNotFound) {
 			http.Error(w, "expense not created", http.StatusNoContent)
 			return
 		}

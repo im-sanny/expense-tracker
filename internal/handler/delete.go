@@ -2,7 +2,7 @@ package handler
 
 import (
 	"errors"
-	er "expense-tracker/pkg/errors"
+	er "expense-tracker/pkg/apperrors"
 	"net/http"
 	"strconv"
 )

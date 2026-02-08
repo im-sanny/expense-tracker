@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 	"expense-tracker/internal/model"
-	"expense-tracker/pkg/errors"
+	"expense-tracker/pkg/apperrors"
 	"fmt"
 	"strings"
 	"time"
@@ -164,7 +164,7 @@ func (r *ExpenseRepo) GetById(id int64) (*model.Expense, error) {
 		&expense.ID, &expense.Date, &expense.Amount, &expense.Note)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.ErrNotFound
+		return nil, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func (r *ExpenseRepo) Put(id int64, expense *model.Expense) (*model.Expense, err
 		&expense.ID, &expense.Date, &expense.Amount, &expense.Note)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.ErrNotFound
+		return nil, apperrors.ErrNotFound
 	}
 
 	if err != nil {
@@ -206,7 +206,7 @@ func (r *ExpenseRepo) Patch(id int64, update *model.Expense) (*model.Expense, er
 		&expense.ID, &expense.Date, &expense.Amount, &expense.Note)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.ErrNotFound
+		return nil, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -223,7 +223,7 @@ func (r *ExpenseRepo) Delete(id int64) error {
 
 	rowsAffected, err := result.RowsAffected()
 	if rowsAffected == 0 {
-		return errors.ErrNotFound
+		return apperrors.ErrNotFound
 	}
 	if err != nil {
 		return err
