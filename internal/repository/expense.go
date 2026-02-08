@@ -4,15 +4,17 @@ import (
 	"database/sql"
 	"expense-tracker/internal/model"
 	"expense-tracker/pkg/errors"
+	"fmt"
+	"strings"
 	"time"
 )
 
 type ExpenseFilter struct {
-	Min  int       `json:"min"`
-	Max  int       `json:"max"`
-	From time.Time `json:"from"`
-	To   time.Time `json:"to"`
-	Search string `json:"search"`
+	Min    int       `json:"min"`
+	Max    int       `json:"max"`
+	From   time.Time `json:"from"`
+	To     time.Time `json:"to"`
+	Search string    `json:"search"`
 }
 
 type ExpenseRepoInterface interface {
@@ -52,28 +54,80 @@ func (r *ExpenseRepo) Post(expense *model.Expense) (*model.Expense, error) {
 	return &created, nil
 }
 
-func (r *ExpenseRepo) Get(offset, limit int, f ExpenseFilter) ([]model.Expense, error) {
-	var expenses []model.Expense
+func (r *ExpenseRepo) buildWhereClause(f ExpenseFilter) (string, []interface{}) {
+	var (
+		whereParts []string
+		args       []interface{}
+	)
+	argCount := 1
 
-rows, err := r.DB.Query(`
-	SELECT id, date, amount, note
-	FROM expenses
-	WHERE ($1 = 0 OR amount >= $1)
-	AND ($2 = 0 OR amount <= $2)
-	AND ($3 = '0001-01-01'::date OR date >= $3::date)
-	AND ($4 = '0001-01-01'::date OR date <= $4::date)
-	AND ($5 = '' OR note ILIKE '%' || $5 || '%')
-	ORDER BY id DESC
-	OFFSET $6
-	LIMIT $7
-	`, f.Min, f.Max, f.From, f.To, f.Search, offset, limit,
-)
+	// min amount filter
+	if f.Min > 0 {
+		whereParts = append(whereParts, fmt.Sprintf("amount >= $%d", argCount))
+		args = append(args, f.Min)
+		argCount++
+	}
+
+	// max amount filter
+	if f.Max > 0 {
+		whereParts = append(whereParts, fmt.Sprintf("amount <= $%d", argCount))
+		args = append(args, f.Max)
+		argCount++
+	}
+
+	// from data filter
+	if !f.From.IsZero() && f.From != time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC) {
+		whereParts = append(whereParts, fmt.Sprintf("date >= $%d", argCount))
+		args = append(args, f.From)
+		argCount++
+	}
+
+	// to data filter
+	if !f.To.IsZero() && f.To != time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC) {
+		whereParts = append(whereParts, fmt.Sprintf("date <= $%d", argCount))
+		args = append(args, f.To)
+		argCount++
+	}
+
+	// search (note) filter
+	if strings.TrimSpace(f.Search) != "" {
+		whereParts = append(whereParts, fmt.Sprintf("note ILIKE $%d", argCount))
+		args = append(args, "%"+strings.TrimSpace(f.Search)+"%")
+		argCount++
+	}
+
+	// combine WHERE parts
+	if len(whereParts) > 0 {
+		return " WHERE " + strings.Join(whereParts, " AND "), args
+	}
+	return "", args
+}
+
+func (r *ExpenseRepo) Get(offset, limit int, f ExpenseFilter) ([]model.Expense, error) {
+	// build base query
+	baseQuery := "SELECT id, date, amount, note FROM expenses"
+
+	// build dynamic where clause
+	whereClause, whereArgs := r.buildWhereClause(f)
+
+	// add ORDER, OFFSET, LIMIT
+	query := baseQuery + whereClause + " ORDER BY id DESC OFFSET $%d LIMIT $%d"
+
+	// append pagination args
+	args := append(whereArgs, offset, limit)
+
+	// format the final query with correct placeholders
+	query = fmt.Sprintf(query, len(whereArgs)+1, len(whereArgs)+2)
+
+	// execute query
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
+	// scan results
+	var expenses []model.Expense
 	for rows.Next() {
 		var expense model.Expense
 		if err := rows.Scan(&expense.ID, &expense.Date, &expense.Amount, &expense.Note); err != nil {
@@ -82,30 +136,23 @@ rows, err := r.DB.Query(`
 		expenses = append(expenses, expense)
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return expenses, nil
+	return expenses, rows.Err()
 }
 
 func (r *ExpenseRepo) Count(f ExpenseFilter) (int, error) {
+	// build base query
+	baseQuery := "SELECT COUNT(*) FROM expenses"
+
+	// build dynamic WHERE clause
+	whereClause, whereArgs := r.buildWhereClause(f)
+
+	// combine
+	query := baseQuery + whereClause
+
+	// execute query
 	var total int
-
-err := r.DB.QueryRow(`
-	SELECT COUNT(*)
-	FROM expenses
-	WHERE ($1 = 0 OR amount >= $1)
-	AND ($2 = 0 OR amount <= $2)
-	AND ($3 = '0001-01-01'::date OR date >= $3::date)
-	AND ($4 = '0001-01-01'::date OR date <= $4::date)
-	AND ($5 = '' OR note ILIKE '%' || $5 || '%')
-	`, f.Min, f.Max, f.From, f.To, f.Search).Scan(&total)
-
-	if err != nil {
-		return 0, err
-	}
-	return total, nil
+	err := r.DB.QueryRow(query, whereArgs...).Scan(&total)
+	return total, err
 }
 
 func (r *ExpenseRepo) GetById(id int64) (*model.Expense, error) {
