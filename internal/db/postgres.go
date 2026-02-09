@@ -7,15 +7,15 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func InitDB() *sql.DB {
-	conStr := "postgres://postgres:360420@localhost:5432/etracker?sslmode=disable"
-	db, err := sql.Open("postgres", conStr)
+func New(dsn string) *sql.DB {
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("db connection successful")
+
 	return db
 }

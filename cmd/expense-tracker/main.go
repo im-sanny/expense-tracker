@@ -1,6 +1,7 @@
 package main
 
 import (
+	"expense-tracker/internal/config"
 	"expense-tracker/internal/db"
 	"expense-tracker/internal/handler"
 	"expense-tracker/internal/repository"
@@ -9,10 +10,11 @@ import (
 )
 
 func main() {
-	database := db.InitDB()
-	defer database.Close()
+	cfg := config.Load()
+	db := db.New(cfg.DB.DSN())
+	defer db.Close()
 
-	repo := repository.NewExpenseRepo(database)
+	repo := repository.NewExpenseRepo(db)
 	h := handler.NewHandler(repo)
 	mux := http.NewServeMux()
 
@@ -24,8 +26,7 @@ func main() {
 	mux.HandleFunc("DELETE /track/{id}", h.Delete)
 
 	log.Println("Server running on port :3000")
-	err := http.ListenAndServe(":3000", mux)
-	if err != nil {
+	if err := http.ListenAndServe(":3000", mux); err != nil {
 		log.Fatal(err)
 	}
 }
