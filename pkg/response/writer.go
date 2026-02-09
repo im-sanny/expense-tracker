@@ -31,7 +31,7 @@ func WriteError(w http.ResponseWriter, err error, statusCode int) {
 	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
-func WriteSuccess(w http.ResponseWriter, statusCode int, data interface{}) error {
+func WriteSuccess(w http.ResponseWriter, data interface{}) error {
 	return WriteJSON(w, http.StatusOK, data)
 }
 
@@ -47,7 +47,7 @@ func WriteNotFound(w http.ResponseWriter) {
 	WriteError(w, apperrors.ErrNotFound, http.StatusNotFound)
 }
 
-func WriterInternalServerError(w http.ResponseWriter, err error) {
+func WriteInternalServerError(w http.ResponseWriter, err error) {
 	WriteError(w, err, http.StatusInternalServerError)
 }
 

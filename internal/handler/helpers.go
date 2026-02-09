@@ -17,10 +17,10 @@ type QueryParams struct {
 	Search string
 }
 
-func ExpenseQuery(r *http.Request) (*QueryParams, error) {
+func ParseExpenseQuery(r *http.Request) (*QueryParams, error) {
 	q := r.URL.Query()
 
-	page, err := validator.ParseInt(q.Get("page"), validator.DefaultLimit, 1, 0)
+	page, err := validator.ParseInt(q.Get("page"), validator.DefaultPage, 1, 0)
 	if err != nil {
 		return nil, apperrors.ErrInvalidPage
 	}
@@ -40,7 +40,7 @@ func ExpenseQuery(r *http.Request) (*QueryParams, error) {
 		return nil, apperrors.ErrInvalidMax
 	}
 
-	if min > 0 && max > 0 && max > min {
+	if min > 0 && max > 0 && min > max {
 		return nil, apperrors.ErrMinGraterThanMax
 	}
 
