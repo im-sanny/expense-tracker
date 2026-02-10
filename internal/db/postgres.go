@@ -2,20 +2,19 @@ package db
 
 import (
 	"database/sql"
-	"log"
+	"fmt"
 
 	_ "github.com/lib/pq"
 )
 
-func New(dsn string) *sql.DB {
+func New(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("open database %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("ping database %w", err)
 	}
-
-	return db
+	return db, nil
 }

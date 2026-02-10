@@ -6,15 +6,32 @@ import (
 	"expense-tracker/internal/handler"
 	"expense-tracker/internal/repository"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 )
 
 func main() {
 	cfg := config.Load()
-	db := db.New(cfg.DB.DSN())
-	defer db.Close()
 
-	repo := repository.NewExpenseRepo(db)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	if err := db.RunMigrations(db.MigrateConfig{
+		DBURL:         cfg.DB.DSN(),
+		MigrationPath: "file://migrations",
+		Logger:        logger,
+	}); err != nil {
+		logger.Error("migration failed", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("✓ migrations complete, starting application")
+
+	database, err := db.New(cfg.DB.DSN())
+	if err != nil {
+		log.Fatalf("cannot connect to database: %v", err)
+	}
+	defer database.Close()
+
+	repo := repository.NewExpenseRepo(database)
 	h := handler.NewHandler(repo)
 	mux := http.NewServeMux()
 
