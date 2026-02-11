@@ -42,8 +42,16 @@ func main() {
 	mux.HandleFunc("PATCH /track/{id}", h.Patch)
 	mux.HandleFunc("DELETE /track/{id}", h.Delete)
 
-	log.Println("Server running on port :3000")
-	if err := http.ListenAndServe(":3000", mux); err != nil {
+	port := os.Getenv("HTTP_PORT")
+	if port == "" {
+		port = "3000"
+	}
+	
+	addr := ":" + port
+
+	log.Printf("Server running on port http://localhost%s", addr)
+
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
 }

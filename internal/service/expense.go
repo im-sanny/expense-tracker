@@ -1,36 +1,31 @@
 package service
 
 import (
+	"context"
 	"expense-tracker/internal/model"
 	"expense-tracker/internal/repository"
+	"time"
 )
 
-type ExpenseService struct {
-	Repo repository.ExpenseRepo
+type ExpenseServiceInterface interface {
+	Get(ctx context.Context, page, limit int, filter repository.ExpenseFilter) ([]model.Expense, error)
+	GetById(ctx context.Context, id int64) (*model.Expense, error)
+	Post(ctx context.Context, expense *model.Expense) (*model.Expense, error)
+	Put(ctx context.Context, id int64, expense *model.Expense) (*model.Expense, error)
+	Patch(ctx context.Context, id int64, expense *model.Expense) (*model.Expense, error)
+	Delete(ctx context.Context, id int64, expense *model.Expense) error
 }
 
-func NewExpenseService(repo repository.ExpenseRepo) *ExpenseService {
-	return &ExpenseService{Repo: repo}
+// service configuration
+type ServiceConfig struct {
+	MaxPage     int
+	DefaultPage int
+	TimeOut     time.Duration
 }
 
-func (s *ExpenseService) List(page, limit int, f repository.ExpenseFilter) (*model.CountRes, error) {
-	offset := (page - 1) * limit
-
-	rows, err := s.Repo.Get(offset, limit, f)
-	if err != nil {
-		return nil, err
-	}
-
-	total, err := s.Repo.Count(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return &model.CountRes{
-		Data:       rows,
-		Page:       page,
-		Total:      total,
-		TotalPages: (total + limit - 1) / limit,
-	}, nil
-
+// default configuration
+var DefaultConfig = ServiceConfig{
+	MaxPage:     100,
+	DefaultPage: 1,
+	TimeOut:     5 * time.Second,
 }
