@@ -11,7 +11,6 @@ var (
 	ErrFromDateAfterTo     = errors.New("'from' date must be before 'to' date")
 	ErrInvalidPage         = errors.New("invalid page number")
 	ErrInvalidLimit        = errors.New("invalid limit value")
-	ErrFailedToGetExpenses = errors.New("failed to retrieve expenses")
 	ErrFailedToCount       = errors.New("failed to count expenses")
 	ErrDatabase            = errors.New("database error")
 	ErrInternalServer      = errors.New("internal server error")
@@ -20,6 +19,11 @@ var (
 	ErrUnauthorized        = errors.New("unauthorized")
 	ErrForbidden           = errors.New("forbidden")
 	ErrTimeOut             = errors.New("request timeout")
+	ErrFailedToCreate      = errors.New("failed to create expense")
+	ErrFailedToGetExpenses = errors.New("failed to retrieve expenses")
+	ErrFailedToDelete      = errors.New("failed to delete expense")
+	ErrFailedToUpdate      = errors.New("failed to update expense")
+	ErrInvalidInput        = errors.New("invalid input")
 )
 
 func IsValidationError(err error) bool {
