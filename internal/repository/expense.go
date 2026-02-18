@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"expense-tracker/internal/model"
 	"expense-tracker/pkg/apperrors"
@@ -18,12 +19,12 @@ type ExpenseFilter struct {
 }
 
 type ExpenseRepoInterface interface {
-	Get(offset, limit int, f ExpenseFilter) ([]model.Expense, error)
-	GetById(id int64) (*model.Expense, error)
-	Post(e *model.Expense) (*model.Expense, error)
-	Put(id int64, e *model.Expense) (*model.Expense, error)
-	Patch(id int64, e *model.Expense) (*model.Expense, error)
-	Delete(id int64) error
+	Get(ctx context.Context, offset, limit int, f ExpenseFilter) ([]model.Expense, error)
+	GetById(ctx context.Context, id int64) (*model.Expense, error)
+	Post(ctx context.Context, e *model.Expense) (*model.Expense, error)
+	Put(ctx context.Context, id int64, e *model.Expense) (*model.Expense, error)
+	Patch(ctx context.Context, id int64, e *model.Expense) (*model.Expense, error)
+	Delete(ctx context.Context, id int64) error
 	Count(f ExpenseFilter) (int, error)
 }
 
@@ -33,25 +34,6 @@ type ExpenseRepo struct {
 
 func NewExpenseRepo(db *sql.DB) ExpenseRepoInterface {
 	return &ExpenseRepo{DB: db}
-}
-
-func (r *ExpenseRepo) Post(expense *model.Expense) (*model.Expense, error) {
-	var created model.Expense
-	expense.Date = time.Now()
-
-	err := r.DB.QueryRow(`
-	INSERT INTO
-	expenses(date, amount, note)
-	VALUES($1, $2, $3)
-	RETURNING id, date, amount, note`,
-		expense.Date, expense.Amount, expense.Note).Scan(
-		&created.ID, &created.Date, &created.Amount, &created.Note)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &created, nil
 }
 
 func (r *ExpenseRepo) buildWhereClause(f ExpenseFilter) (string, []interface{}) {
@@ -103,7 +85,7 @@ func (r *ExpenseRepo) buildWhereClause(f ExpenseFilter) (string, []interface{}) 
 	return "", args
 }
 
-func (r *ExpenseRepo) Get(offset, limit int, f ExpenseFilter) ([]model.Expense, error) {
+func (r *ExpenseRepo) Get(ctx context.Context, offset, limit int, f ExpenseFilter) ([]model.Expense, error) {
 	// build base query
 	baseQuery := "SELECT id, date, amount, note FROM expenses"
 
@@ -155,7 +137,7 @@ func (r *ExpenseRepo) Count(f ExpenseFilter) (int, error) {
 	return total, err
 }
 
-func (r *ExpenseRepo) GetById(id int64) (*model.Expense, error) {
+func (r *ExpenseRepo) GetById(ctx context.Context, id int64) (*model.Expense, error) {
 	var expense model.Expense
 	err := r.DB.QueryRow(`
 	SELECT id, date, amount, note
@@ -173,7 +155,26 @@ func (r *ExpenseRepo) GetById(id int64) (*model.Expense, error) {
 	return &expense, nil
 }
 
-func (r *ExpenseRepo) Put(id int64, expense *model.Expense) (*model.Expense, error) {
+func (r *ExpenseRepo) Post(ctx context.Context, expense *model.Expense) (*model.Expense, error) {
+	var created model.Expense
+	expense.Date = time.Now()
+
+	err := r.DB.QueryRow(`
+	INSERT INTO
+	expenses(date, amount, note)
+	VALUES($1, $2, $3)
+	RETURNING id, date, amount, note`,
+		expense.Date, expense.Amount, expense.Note).Scan(
+		&created.ID, &created.Date, &created.Amount, &created.Note)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &created, nil
+}
+
+func (r *ExpenseRepo) Put(ctx context.Context, id int64, expense *model.Expense) (*model.Expense, error) {
 	expense.Date = time.Now()
 	err := r.DB.QueryRow(`
 	UPDATE expenses SET
@@ -193,7 +194,7 @@ func (r *ExpenseRepo) Put(id int64, expense *model.Expense) (*model.Expense, err
 	return expense, nil
 }
 
-func (r *ExpenseRepo) Patch(id int64, update *model.Expense) (*model.Expense, error) {
+func (r *ExpenseRepo) Patch(ctx context.Context, id int64, update *model.Expense) (*model.Expense, error) {
 	var expense model.Expense
 
 	err := r.DB.QueryRow(`
@@ -215,7 +216,7 @@ func (r *ExpenseRepo) Patch(id int64, update *model.Expense) (*model.Expense, er
 	return &expense, nil
 }
 
-func (r *ExpenseRepo) Delete(id int64) error {
+func (r *ExpenseRepo) Delete(ctx context.Context, id int64) error {
 	result, err := r.DB.Exec(`DELETE FROM expenses WHERE id=$1`, id)
 	if err != nil {
 		return err

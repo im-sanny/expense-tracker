@@ -44,9 +44,9 @@ func main() {
 
 	port := os.Getenv("HTTP_PORT")
 	if port == "" {
-		port = "3000"
+		port = "8000"
 	}
-	
+
 	addr := ":" + port
 
 	log.Printf("Server running on port http://localhost%s", addr)

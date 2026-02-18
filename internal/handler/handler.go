@@ -1,26 +1,24 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"expense-tracker/internal/model"
 	"expense-tracker/internal/repository"
+	"expense-tracker/internal/service"
 	"expense-tracker/pkg/apperrors"
 	"expense-tracker/pkg/response"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type ExpenseHandler struct {
-	Repo repository.ExpenseRepoInterface
+	Service service.ExpenseServiceInterface
 }
 
-func NewHandler(repo repository.ExpenseRepoInterface) *ExpenseHandler {
-	return &ExpenseHandler{Repo: repo}
+func NewHandler(service service.ExpenseServiceInterface) *ExpenseHandler {
+	return &ExpenseHandler{Service: service}
 }
 
 // =======GET=======
@@ -33,6 +31,7 @@ func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Parsed params: %+v", params)
+
 	filter := repository.ExpenseFilter{
 		Min:    params.Min,
 		Max:    params.Max,
@@ -41,61 +40,14 @@ func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 		Search: params.Search,
 	}
 
-	offset := CalculateOffset(params.Page, params.Limit)
-
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	// execute query concurrently
-	expensesChan := make(chan []model.Expense, 1)
-	countChan := make(chan int, 1)
-	errChan := make(chan error, 2)
-
-	go func() {
-		expense, err := h.Repo.Get(offset, params.Limit, filter)
-		if err != nil {
-			errChan <- fmt.Errorf("%w: %v", apperrors.ErrFailedToGetExpenses, err)
-			return
-		}
-		expensesChan <- expense
-	}()
-
-	go func() {
-		total, err := h.Repo.Count(filter)
-		if err != nil {
-			errChan <- fmt.Errorf("%w: %v", apperrors.ErrFailedToCount, err)
-			return
-		}
-		countChan <- total
-	}()
-
-	// wait for result
-	var expenses []model.Expense
-	var total int
-
-	for i := 0; i < 2; i++ {
-		select {
-		case err := <-errChan:
-			log.Printf("database error: %v", err)
-			response.WriteInternalServerError(w, err)
-			return
-		case expenses = <-expensesChan:
-		case total = <-countChan:
-		case <-ctx.Done():
-			response.WriteError(w, apperrors.ErrTimeOut, http.StatusGatewayTimeout)
-			return
-		}
+	result, err := h.Service.Get(r.Context(), params.Page, params.Limit, filter)
+	if err != nil {
+		log.Printf("server error: %v", err)
+		response.WriteError(w, err, http.StatusInternalServerError)
+		return
 	}
 
-	// build response
-	responseData := model.CountRes{
-		Data:       expenses,
-		Page:       params.Page,
-		TotalPages: CalculateTotalPage(total, params.Limit),
-		Total:      total,
-	}
-
-	if err := response.WriteSuccess(w, responseData); err != nil {
+	if err := response.WriteSuccess(w, result); err != nil {
 		log.Printf("failed to write response: %v", err)
 		return
 	}
@@ -112,7 +64,7 @@ func (h *ExpenseHandler) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expense, err := h.Repo.GetById(int64(id))
+	expense, err := h.Service.GetById(r.Context(), int64(id))
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
@@ -138,7 +90,7 @@ func (h *ExpenseHandler) Post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	create, err := h.Repo.Post(&e)
+	create, err := h.Service.Post(r.Context(), &e)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			http.Error(w, "expense not created", http.StatusNoContent)
@@ -175,7 +127,7 @@ func (h *ExpenseHandler) Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := h.Repo.Put(int64(id), &e)
+	updated, err := h.Service.Put(r.Context(), int64(id), &e)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
@@ -209,7 +161,7 @@ func (h *ExpenseHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := h.Repo.Patch(int64(id), &e)
+	updated, err := h.Service.Patch(r.Context(), int64(id), &e)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
@@ -238,7 +190,7 @@ func (h *ExpenseHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.Repo.Delete(int64(id))
+	err = h.Service.Delete(r.Context(), int64(id))
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			http.Error(w, "expense not found", http.StatusNotFound)
