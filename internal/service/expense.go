@@ -111,6 +111,18 @@ func (s *ExpenseService) Post(ctx context.Context, expense *model.Expense) (*mod
 	return s.repo.Post(ctx, expense)
 }
 
+func (s *ExpenseService) Put(ctx context.Context, id int64, expense *model.Expense) (*model.Expense, error) {
+	return s.repo.Put(ctx, id, expense)
+}
+
+func (s *ExpenseService) Patch(ctx context.Context, id int64, expense *model.Expense) (*model.Expense, error) {
+	return s.repo.Patch(ctx, id, expense)
+}
+
+func (s *ExpenseService) Delete(ctx context.Context, id int64) error {
+	return s.repo.Delete(ctx, id)
+}
+
 func (s *ExpenseService) validatePagination(page, limit int) error {
 	if page < 1 {
 		return errors.New("page must be at least 1")
