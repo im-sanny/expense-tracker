@@ -103,6 +103,14 @@ func (s *ExpenseService) Get(ctx context.Context, page, limit int, filter reposi
 
 }
 
+func (s *ExpenseService) GetById(ctx context.Context, id int64) (*model.Expense, error) {
+	return s.repo.GetById(ctx, id)
+}
+
+func (s *ExpenseService) Post(ctx context.Context, expense *model.Expense) (*model.Expense, error) {
+	return s.repo.Post(ctx, expense)
+}
+
 func (s *ExpenseService) validatePagination(page, limit int) error {
 	if page < 1 {
 		return errors.New("page must be at least 1")
