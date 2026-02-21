@@ -10,7 +10,12 @@ import (
 
 // Config holds the configuration for the application
 type Config struct {
-	DB DBConfig
+	DB   DBConfig
+	HTTP HTTPConfig
+}
+
+type HTTPConfig struct {
+	Port string
 }
 
 // DBConfig holds the database specific configuration
@@ -50,6 +55,9 @@ func Load() *Config {
 			Port:     mustGet("DB_PORT"),
 			Name:     mustGet("DB_NAME"),
 			SSLMode:  mustGet("DB_SSLMODE"),
+		},
+		HTTP: HTTPConfig{
+			Port: mustGet("HTTP_PORT"),
 		},
 	}
 	return cfg

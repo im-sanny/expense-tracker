@@ -1,57 +1,48 @@
 package main
 
 import (
+	"context"
+	"expense-tracker/internal/app"
 	"expense-tracker/internal/config"
-	"expense-tracker/internal/db"
-	"expense-tracker/internal/handler"
-	"expense-tracker/internal/repository"
-	"log"
 	"log/slog"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
+	// 1. Load Configuration
 	cfg := config.Load()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	if err := db.RunMigrations(db.MigrateConfig{
-		DBURL:         cfg.DB.DSN(),
-		MigrationPath: "file://migrations",
-		Logger:        logger,
-	}); err != nil {
-		logger.Error("migration failed", "error", err)
+	// 2. Setup Logger
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+
+	// 3. Initialize Application
+	application, err := app.New(cfg, logger)
+	if err != nil {
+		logger.Error("failed to initialize app", "error", err)
 		os.Exit(1)
 	}
-	logger.Info("✓ migrations complete, starting application")
 
-	database, err := db.New(cfg.DB.DSN())
-	if err != nil {
-		log.Fatalf("cannot connect to database: %v", err)
-	}
-	defer database.Close()
+	// 4. Setup Context with Signal Handling
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	repo := repository.NewExpenseRepo(database)
-	h := handler.NewHandler(repo)
-	mux := http.NewServeMux()
+	// Listen for interrupt signals (Ctrl+C, kill)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
-	mux.HandleFunc("GET /track", h.Get)
-	mux.HandleFunc("GET /track/{id}", h.GetById)
-	mux.HandleFunc("POST /track", h.Post)
-	mux.HandleFunc("PUT /track/{id}", h.Put)
-	mux.HandleFunc("PATCH /track/{id}", h.Patch)
-	mux.HandleFunc("DELETE /track/{id}", h.Delete)
+	go func() {
+		<-quit
+		logger.Info("received shutdown signal")
+		cancel() // Triggers graceful shutdown in app.Run
+	}()
 
-	port := os.Getenv("HTTP_PORT")
-	if port == "" {
-		port = "8000"
-	}
-
-	addr := ":" + port
-
-	log.Printf("Server running on port http://localhost%s", addr)
-
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatal(err)
+	// 5. Run Application
+	if err := application.Run(ctx); err != nil {
+		logger.Error("application error", "error", err)
+		os.Exit(1)
 	}
 }
