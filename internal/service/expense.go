@@ -11,7 +11,7 @@ import (
 )
 
 type ExpenseServiceInterface interface {
-	Get(ctx context.Context, page, limit int, filter repository.ExpenseFilter) ([]model.Expense, error)
+	Get(ctx context.Context, page, limit int, filter repository.ExpenseFilter) (*model.CountRes, error)
 	GetById(ctx context.Context, id int64) (*model.Expense, error)
 	Post(ctx context.Context, expense *model.Expense) (*model.Expense, error)
 	Put(ctx context.Context, id int64, expense *model.Expense) (*model.Expense, error)
@@ -61,7 +61,7 @@ func (s *ExpenseService) Get(ctx context.Context, page, limit int, filter reposi
 	errChan := make(chan error, 2)
 
 	go func() {
-		expense, err := s.repo.Get(ctx, offset, page, filter)
+		expense, err := s.repo.Get(ctx, offset, limit, filter)
 		if err != nil {
 			errChan <- fmt.Errorf("%w: %v", apperrors.ErrFailedToGetExpenses, err)
 			return

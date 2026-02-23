@@ -8,6 +8,7 @@ import (
 	"expense-tracker/internal/db"
 	"expense-tracker/internal/handler"
 	"expense-tracker/internal/repository"
+	"expense-tracker/internal/service"
 	"log/slog"
 	"net/http"
 	"time"
@@ -15,9 +16,10 @@ import (
 
 // App represents the running application
 type App struct {
-	logger *slog.Logger
-	server *http.Server
-	db     *sql.DB
+	logger  *slog.Logger
+	server  *http.Server
+	db      *sql.DB
+	service *service.ExpenseService
 }
 
 // New initializes the application and wires dependencies
@@ -40,7 +42,8 @@ func New(cfg *config.Config, logger *slog.Logger) (*App, error) {
 
 	// 3. Wire Dependencies
 	repo := repository.NewExpenseRepo(database)
-	h := handler.NewHandler(repo)
+	svc := service.NewExpenseService(repo, nil)
+	h := handler.NewHandler(svc)
 	mux := http.NewServeMux()
 
 	// 4. Register Routes
@@ -61,9 +64,10 @@ func New(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	}
 
 	return &App{
-		logger: logger,
-		server: server,
-		db:     database,
+		logger:  logger,
+		server:  server,
+		db:      database,
+		service: svc,
 	}, nil
 }
 
