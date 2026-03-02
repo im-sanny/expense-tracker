@@ -7,6 +7,7 @@ import (
 	"expense-tracker/internal/config"
 	"expense-tracker/internal/db"
 	"expense-tracker/internal/handler"
+	"expense-tracker/internal/middlewares"
 	"expense-tracker/internal/repository"
 	"expense-tracker/internal/service"
 	"log/slog"
@@ -54,10 +55,12 @@ func New(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	mux.HandleFunc("PATCH /track/{id}", h.Patch)
 	mux.HandleFunc("DELETE /track/{id}", h.Delete)
 
+	handler := middlewares.Recover(logger)(middlewares.JSONMiddleware(mux))
+
 	// 5. Setup Server
 	server := &http.Server{
 		Addr:         ":" + cfg.HTTP.Port,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
