@@ -23,7 +23,6 @@ func NewHandler(service service.ExpenseServiceInterface) *ExpenseHandler {
 
 // =======GET=======
 func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 
 	params, err := ParseExpenseQuery(r)
 	if err != nil {
@@ -55,7 +54,6 @@ func (h *ExpenseHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // =======GETbyID=======
 func (h *ExpenseHandler) GetById(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
@@ -110,7 +108,6 @@ func (h *ExpenseHandler) Post(w http.ResponseWriter, r *http.Request) {
 
 // =======PUT=======
 func (h *ExpenseHandler) Put(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
@@ -146,7 +143,6 @@ func (h *ExpenseHandler) Put(w http.ResponseWriter, r *http.Request) {
 
 // =======PATCH=======
 func (h *ExpenseHandler) Patch(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
@@ -181,7 +177,6 @@ func (h *ExpenseHandler) Patch(w http.ResponseWriter, r *http.Request) {
 
 // =======DELETE=======
 func (h *ExpenseHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
