@@ -55,7 +55,9 @@ func New(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	mux.HandleFunc("PATCH /track/{id}", h.Patch)
 	mux.HandleFunc("DELETE /track/{id}", h.Delete)
 
-	handler := middlewares.Recover(logger)(middlewares.JSONMiddleware(mux))
+	handler := middlewares.JSONMiddleware(mux)
+	handler = middlewares.LoggingMiddleware(logger)(handler)
+	handler = middlewares.Recover(logger)(handler)
 
 	// 5. Setup Server
 	server := &http.Server{
