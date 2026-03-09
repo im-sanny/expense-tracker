@@ -56,6 +56,7 @@ func New(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	mux.HandleFunc("DELETE /track/{id}", h.Delete)
 
 	handler := middlewares.JSONMiddleware(mux)
+	handler = middlewares.Cors(handler)
 	handler = middlewares.LoggingMiddleware(logger)(handler)
 	handler = middlewares.Recover(logger)(handler)
 
