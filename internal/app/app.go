@@ -58,7 +58,7 @@ func New(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	handler := middlewares.JSONMiddleware(mux)
 	handler = middlewares.Cors(handler)
 	handler = middlewares.LoggingMiddleware(logger)(handler)
-	handler = middlewares.TimeOutMiddleware(30 * time.Second)(handler)
+	handler = middlewares.TimeoutMiddleware(30 * time.Second)(handler)
 	handler = middlewares.Recover(logger)(handler)
 
 	// 5. Setup Server
