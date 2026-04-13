@@ -10,8 +10,9 @@ import (
 
 // Config holds the configuration for the application
 type Config struct {
-	DB   DBConfig
-	HTTP HTTPConfig
+	DB        DBConfig
+	HTTP      HTTPConfig
+	JWTSecret string
 }
 
 type HTTPConfig struct {
@@ -59,6 +60,7 @@ func Load() *Config {
 		HTTP: HTTPConfig{
 			Port: mustGet("HTTP_PORT"),
 		},
+		JWTSecret: mustGet("JWT_SECRET_KEY"),
 	}
 	return cfg
 }
