@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,9 +9,34 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type User struct {
+	ID           string
+	Email        string
+	PasswordHash string
+	IsVerified   bool
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type UserService interface {
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	CreateUser(ctx context.Context, email, passwordHash string) (*User, error)
+	SaveRefreshToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) error
+	DeleteRefreshToken(ctx context.Context, tokenHash string) error
+	ValidateRefreshToken(ctx context.Context, tokenHash string) (string, error)
+}
+
 // Auth holds dependencies for auth operations
-type Auth struct {
-	JWTSecret []byte
+type AuthService struct {
+	jwtSecret   []byte
+	userService UserService
+}
+
+func NewAuthService(jwtSecret string, userService UserService) *AuthService {
+	return &AuthService{
+		jwtSecret:   []byte(jwtSecret),
+		userService: userService,
+	}
 }
 
 // HashPassword hashes plain-text password using bcrypt
@@ -25,15 +51,15 @@ func CheckPassword(password, hash string) bool {
 }
 
 // GenerateAccessToken creates a short-lived JWT for API request
-func (a *Auth) GenerateAccessToken(userID string) (string, error) {
+func (s *AuthService) GenerateAccessToken(userID string) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(15 * time.Minute).Unix(),
 		"iat":     time.Now().Unix(),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
-	return token.SignedString(a.JWTSecret)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(s.jwtSecret)
 }
 
 // GenerateRefreshToken creates a random opaque token (UUID-style)
@@ -45,9 +71,9 @@ func GenerateRefreshToken() string {
 }
 
 // ValidateAccessToken parses and validates a JWT
-func (a *Auth) ValidateAccessToken(tokenString string) (string, error) {
+func (s *AuthService) ValidateAccessToken(tokenString string) (string, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return a.JWTSecret, nil
+		return s.jwtSecret, nil
 	})
 
 	if err != nil || !token.Valid {
@@ -65,4 +91,48 @@ func (a *Auth) ValidateAccessToken(tokenString string) (string, error) {
 	}
 
 	return userID, nil
+}
+
+// Auth business logic
+func (s *AuthService) Register(ctx context.Context, email, password string) (*User, error) {
+	// Check if email exists
+	existing, err := s.userService.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("check user exists: %w", err)
+	}
+	if existing != nil {
+		return nil, fmt.Errorf("user already exists")
+	}
+
+	// Hash and create
+	hash, err := HashPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("hash password: %w", err)
+	}
+	return s.userService.CreateUser(ctx, email, hash)
+}
+
+func (s *AuthService) Login(ctx context.Context, email, password string) (accessToken, refreshToken string, err error) {
+	user, err := s.userService.GetUserByEmail(ctx, email)
+	if err != nil {
+		return "", "", fmt.Errorf("get user: %w", err)
+	}
+	// Generic errors to prevent enumeration
+	if user == nil || !CheckPassword(password, user.PasswordHash) {
+		return "", "", fmt.Errorf("invalid credentials")
+	}
+
+	// Generate tokens
+	accessToken, err = s.GenerateAccessToken(user.ID)
+	if err != nil {
+		return "", "", fmt.Errorf("generate access token: %w", err)
+	}
+	refreshToken = GenerateRefreshToken()
+
+	// Store refresh token hash in DB
+	if err := s.userService.SaveRefreshToken(ctx, user.ID, refreshToken, time.Now().Add(7*24*time.Hour)); err != nil {
+		return "", "", fmt.Errorf("save refresh token: %w", err)
+	}
+
+	return accessToken, refreshToken, nil
 }
