@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -135,4 +136,19 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (access
 	}
 
 	return accessToken, refreshToken, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
+	return s.userService.DeleteRefreshToken(ctx, refreshToken)
+}
+
+func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (string, error) {
+	// validate refresh token exists and is not expired
+	userID, err := s.userService.ValidateRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return "", errors.New("invalid refresh token")
+	}
+
+	// Generate new access token
+	return s.GenerateAccessToken(userID)
 }
