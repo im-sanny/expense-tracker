@@ -1,20 +1,43 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"expense-tracker/internal/model"
+	"expense-tracker/internal/service"
 )
 
-type UserRepository struct {
+type AuthRepo struct {
 	db *sql.DB
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewAuthRepo(db *sql.DB) *AuthRepo {
+	return &AuthRepo{db: db}
+}
+
+func (r *AuthRepo) GetUserByEmail(ctx context.Context, email string) (*service.User, error) {
+	query := `
+		SELECT id, email, password_hash, created_at, updated_at
+		FROM users
+		WHERE email= $1
+	`
+
+	var u service.User
+	err := r.db.QueryRowContext(ctx, query, email).Scan(
+		&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
 }
 
 // CreateUser inserts a new user into the database
-func (r *UserRepository) CreateUser(email, passwordHash string) (*model.User, error) {
+func (r *AuthRepo) CreateUser(email, passwordHash string) (*model.User, error) {
 	query := `
 		INSERT INTO users (email, password_hash)
 		VALUES ($1, $2)
@@ -38,7 +61,7 @@ func (r *UserRepository) CreateUser(email, passwordHash string) (*model.User, er
 }
 
 // GetUserByEmail
-func (r *UserRepository) GetUserByEmail(email string) (*model.User, error) {
+func (r *AuthRepo) GetUserByEmail(email string) (*model.User, error) {
 	query := `
 		SELECT id, password_hash, is_verified, created_at, updated_at
 		FROM users
