@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"expense-tracker/internal/model"
 	"expense-tracker/internal/service"
+	"time"
 )
 
 type AuthRepo struct {
@@ -37,49 +37,50 @@ func (r *AuthRepo) GetUserByEmail(ctx context.Context, email string) (*service.U
 }
 
 // CreateUser inserts a new user into the database
-func (r *AuthRepo) CreateUser(email, passwordHash string) (*model.User, error) {
+func (r *AuthRepo) CreateUser(ctx context.Context, email, passwordHash string) (*service.User, error) {
 	query := `
 		INSERT INTO users (email, password_hash)
 		VALUES ($1, $2)
 		RETURNING id, email, is_verified, created_at, updated_at
 	`
 
-	user := &model.User{}
-	err := r.db.QueryRow(query, email, passwordHash).Scan(
-		&user.ID,
-		&user.Email,
-		&user.IsVerified,
-		&user.CreatedAt,
-		&user.UpdatedAt,
+	var u service.User
+	err := r.db.QueryRowContext(ctx, query, email, passwordHash).Scan(
+		&u.ID,
+		&u.Email,
+		&u.IsVerified,
+		&u.CreatedAt,
+		&u.UpdatedAt,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return user, nil
+	return &u, nil
 }
 
-// GetUserByEmail
-func (r *AuthRepo) GetUserByEmail(email string) (*model.User, error) {
+func (r *AuthRepo) SaveRefreshToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) error {
 	query := `
-		SELECT id, password_hash, is_verified, created_at, updated_at
-		FROM users
-		WHERE email = $1
+		INSERT INTO refresh_tokens (user_id, tokenHash, expiresAt)
+		VALUES ($1, $2, $3)
 	`
+	_, err := r.db.ExecContext(ctx, query, userID, tokenHash, expiresAt)
+	return err
+}
 
-	user := &model.User{}
-	err := r.db.QueryRow(query, email).Scan(
-		&user.ID,
-		&user.Email,
-		&user.PasswordHash,
-		&user.IsVerified,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err != nil {
-		return nil, err
+func (r *AuthRepo) DeleteRefreshToken(ctx context.Context, tokenHash string) (string, error) {
+	query := `
+		SELECT user_id FROM refresh_tokens
+		WHERE token_hash =$1 AND expiresAt > NOW()
+	`
+	var userID string
+	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(&userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", errors.New("token not found or expired")
 	}
-	return user, nil
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
 }
