@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"expense-tracker/internal/model"
 	"fmt"
 	"time"
 
@@ -10,18 +11,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type User struct {
-	ID           string
-	Email        string
-	PasswordHash string
-	IsVerified   bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-}
-
-type UserService interface {
-	GetUserByEmail(ctx context.Context, email string) (*User, error)
-	CreateUser(ctx context.Context, email, passwordHash string) (*User, error)
+type UserRepository interface {
+	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
+	CreateUser(ctx context.Context, email, passwordHash string) (*model.User, error)
 	SaveRefreshToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) error
 	DeleteRefreshToken(ctx context.Context, tokenHash string) error
 	ValidateRefreshToken(ctx context.Context, tokenHash string) (string, error)
@@ -29,14 +21,14 @@ type UserService interface {
 
 // Auth holds dependencies for auth operations
 type AuthService struct {
-	jwtSecret   []byte
-	userService UserService
+	jwtSecret []byte
+	userRepo  UserRepository
 }
 
-func NewAuthService(jwtSecret string, userService UserService) *AuthService {
+func NewAuthService(jwtSecret string, userRepo UserRepository) *AuthService {
 	return &AuthService{
-		jwtSecret:   []byte(jwtSecret),
-		userService: userService,
+		jwtSecret: []byte(jwtSecret),
+		userRepo:  userRepo,
 	}
 }
 
@@ -95,9 +87,9 @@ func (s *AuthService) ValidateAccessToken(tokenString string) (string, error) {
 }
 
 // Auth business logic
-func (s *AuthService) Register(ctx context.Context, email, password string) (*User, error) {
+func (s *AuthService) Register(ctx context.Context, email, password string) (*model.User, error) {
 	// Check if email exists
-	existing, err := s.userService.GetUserByEmail(ctx, email)
+	existing, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("check user exists: %w", err)
 	}
@@ -110,11 +102,11 @@ func (s *AuthService) Register(ctx context.Context, email, password string) (*Us
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
-	return s.userService.CreateUser(ctx, email, hash)
+	return s.userRepo.CreateUser(ctx, email, hash)
 }
 
 func (s *AuthService) Login(ctx context.Context, email, password string) (accessToken, refreshToken string, err error) {
-	user, err := s.userService.GetUserByEmail(ctx, email)
+	user, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return "", "", fmt.Errorf("get user: %w", err)
 	}
@@ -131,7 +123,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (access
 	refreshToken = GenerateRefreshToken()
 
 	// Store refresh token hash in DB
-	if err := s.userService.SaveRefreshToken(ctx, user.ID, refreshToken, time.Now().Add(7*24*time.Hour)); err != nil {
+	if err := s.userRepo.SaveRefreshToken(ctx, user.ID, refreshToken, time.Now().Add(7*24*time.Hour)); err != nil {
 		return "", "", fmt.Errorf("save refresh token: %w", err)
 	}
 
@@ -139,12 +131,12 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (access
 }
 
 func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
-	return s.userService.DeleteRefreshToken(ctx, refreshToken)
+	return s.userRepo.DeleteRefreshToken(ctx, refreshToken)
 }
 
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (string, error) {
 	// validate refresh token exists and is not expired
-	userID, err := s.userService.ValidateRefreshToken(ctx, refreshToken)
+	userID, err := s.userRepo.ValidateRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return "", errors.New("invalid refresh token")
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"expense-tracker/internal/service"
+	"expense-tracker/internal/model"
 	"time"
 )
 
@@ -16,14 +16,14 @@ func NewAuthRepo(db *sql.DB) *AuthRepo {
 	return &AuthRepo{db: db}
 }
 
-func (r *AuthRepo) GetUserByEmail(ctx context.Context, email string) (*service.User, error) {
+func (r *AuthRepo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	query := `
 		SELECT id, email, password_hash, created_at, updated_at
 		FROM users
 		WHERE email= $1
 	`
 
-	var u service.User
+	var u model.User
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt,
 	)
@@ -37,14 +37,14 @@ func (r *AuthRepo) GetUserByEmail(ctx context.Context, email string) (*service.U
 }
 
 // CreateUser inserts a new user into the database
-func (r *AuthRepo) CreateUser(ctx context.Context, email, passwordHash string) (*service.User, error) {
+func (r *AuthRepo) CreateUser(ctx context.Context, email, passwordHash string) (*model.User, error) {
 	query := `
 		INSERT INTO users (email, password_hash)
 		VALUES ($1, $2)
 		RETURNING id, email, is_verified, created_at, updated_at
 	`
 
-	var u service.User
+	var u model.User
 	err := r.db.QueryRowContext(ctx, query, email, passwordHash).Scan(
 		&u.ID,
 		&u.Email,
