@@ -69,7 +69,13 @@ func (r *AuthRepo) SaveRefreshToken(ctx context.Context, userID, tokenHash strin
 	return err
 }
 
-func (r *AuthRepo) DeleteRefreshToken(ctx context.Context, tokenHash string) (string, error) {
+func (r *AuthRepo) DeleteRefreshToken(ctx context.Context, tokenHash string) error {
+	query := `DELETE FROM refresh_tokens WHERE token_hash =$1`
+	_, err := r.db.ExecContext(ctx, query, tokenHash)
+	return err
+}
+
+func (r *AuthRepo) ValidateRefreshToken(ctx context.Context, tokenHash string) (string, error) {
 	query := `
 		SELECT user_id FROM refresh_tokens
 		WHERE token_hash =$1 AND expiresAt > NOW()

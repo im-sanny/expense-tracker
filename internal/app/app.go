@@ -47,13 +47,27 @@ func New(cfg *config.Config, logger *slog.Logger) (*App, error) {
 	h := handler.NewHandler(svc)
 	mux := http.NewServeMux()
 
+	authRepo := repository.NewAuthRepo(database)
+	authService := service.NewAuthService(cfg.JWTSecret, authRepo)
+	authHandler := handler.NewAuthHandler(authService)
+
+	mux.HandleFunc("POST /auth/register", authHandler.Register)
+	mux.HandleFunc("POST /auth/login", authHandler.Login)
+	mux.HandleFunc("POST /auth/logout", authHandler.Logout)
+	mux.HandleFunc("POST /auth/refresh", authHandler.Refresh)
+
 	// 4. Register Routes
+	protectedMux := http.NewServeMux()
 	mux.HandleFunc("GET /track", h.Get)
-	mux.HandleFunc("GET /track/{id}", h.GetById)
-	mux.HandleFunc("POST /track", h.Post)
-	mux.HandleFunc("PUT /track/{id}", h.Put)
-	mux.HandleFunc("PATCH /track/{id}", h.Patch)
-	mux.HandleFunc("DELETE /track/{id}", h.Delete)
+	protectedMux.HandleFunc("GET /track/{id}", h.GetById)
+	protectedMux.HandleFunc("POST /track", h.Post)
+	protectedMux.HandleFunc("PUT /track/{id}", h.Put)
+	protectedMux.HandleFunc("PATCH /track/{id}", h.Patch)
+	protectedMux.HandleFunc("DELETE /track/{id}", h.Delete)
+
+	protectedHandler := middlewares.AuthMiddleware(authService)(protectedMux)
+	mux.Handle("/track", protectedHandler)
+	mux.Handle("/track/", protectedHandler)
 
 	handler := middlewares.JSONMiddleware(mux)
 	handler = middlewares.Cors(handler)
