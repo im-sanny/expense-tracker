@@ -18,14 +18,19 @@ func NewAuthRepo(db *sql.DB) *AuthRepo {
 
 func (r *AuthRepo) GetUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	query := `
-		SELECT id, email, password_hash, created_at, updated_at
+		SELECT id, email, password_hash, is_verified, created_at, updated_at
 		FROM users
-		WHERE email= $1
+		WHERE email = $1
 	`
 
 	var u model.User
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
-		&u.ID, &u.Email, &u.PasswordHash, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID,
+		&u.Email,
+		&u.PasswordHash,
+		&u.IsVerified,
+		&u.CreatedAt,
+		&u.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -62,7 +67,7 @@ func (r *AuthRepo) CreateUser(ctx context.Context, email, passwordHash string) (
 
 func (r *AuthRepo) SaveRefreshToken(ctx context.Context, userID, tokenHash string, expiresAt time.Time) error {
 	query := `
-		INSERT INTO refresh_tokens (user_id, tokenHash, expiresAt)
+		INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
 		VALUES ($1, $2, $3)
 	`
 	_, err := r.db.ExecContext(ctx, query, userID, tokenHash, expiresAt)
@@ -78,7 +83,7 @@ func (r *AuthRepo) DeleteRefreshToken(ctx context.Context, tokenHash string) err
 func (r *AuthRepo) ValidateRefreshToken(ctx context.Context, tokenHash string) (string, error) {
 	query := `
 		SELECT user_id FROM refresh_tokens
-		WHERE token_hash =$1 AND expiresAt > NOW()
+		WHERE token_hash =$1 AND expires_at > NOW()
 	`
 	var userID string
 	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(&userID)
