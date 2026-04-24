@@ -58,7 +58,7 @@ func New(cfg *config.Config, logger *slog.Logger) (*App, error) {
 
 	// 4. Register Routes
 	protectedMux := http.NewServeMux()
-	mux.HandleFunc("GET /track", h.Get)
+	protectedMux.HandleFunc("GET /track", h.Get)
 	protectedMux.HandleFunc("GET /track/{id}", h.GetById)
 	protectedMux.HandleFunc("POST /track", h.Post)
 	protectedMux.HandleFunc("PUT /track/{id}", h.Put)
