@@ -97,6 +97,7 @@ func (h *ExpenseHandler) Post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(create)
 	if err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
