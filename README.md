@@ -194,13 +194,16 @@ curl "http://localhost:3000/track?q=coffee" -b cookies.txt
 ├── internal/
 │   ├── app/            # Routes
 │   ├── config/         # Environment configuration
-│   ├── database/       # DB connection & migrations
+│   ├── db      /       # DB connection & migrations
 │   ├── handler/        # HTTP request/response logic
 │   ├── service/        # Business logic
 │   ├── repository/     # Data access layer
 │   ├── model/          # Data structures
 │   └── middlewares/    # Auth, CORS, Logging, etc.
 ├── migrations/         # SQL migration files
+├── pkg/                # Custom packages
+├── .air.toml           # Air config
+├── schema.sql/         # Database schema
 ├── test.sh             # Integration test suite
 
 ```
